@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
-//using Crestron.SimplSharp.Scheduler;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.UI;
@@ -49,6 +48,9 @@ namespace FM.Utilities
         const uint LIMIT_HOUR_MAX = 23;
         const uint LIMIT_MINUTE_MAX = 59;
         const uint LIMIT_DAYS = 7;
+
+        // defaults
+        const string DEFAULT_FILENAME = "schedule.txt";
         #endregion
 
         #region class variables
@@ -59,24 +61,96 @@ namespace FM.Utilities
         BasicTriList panel;
         uint buttonOffset;
 
+        CTimer timer;
+
         bool[] daysStart;
         bool[] daysStop;
         uint hourStart, hourStop;
         uint minuteStart, minuteStop;
+        string fileName;
+
+        Action StartMethod, StopMethod;
 
         #endregion
 
+        #region public methods
+
         public Scheduler(BasicTriList panel, uint buttonOffset)
+        {
+            Init(panel, buttonOffset, DEFAULT_FILENAME);
+        }
+
+        public Scheduler(BasicTriList panel, uint buttonOffset, string fileName)
+        {
+            Init(panel, buttonOffset, fileName);            
+        }        
+
+        /// <summary>
+        /// Starts the internal timer
+        /// </summary>
+        /// <returns></returns>
+        public bool Start()
+        {
+            if (timer == null)
+            {
+                timer = new CTimer(TimerCheck, null, 0, 5000);
+                if (timer != null)
+                    return true;
+                else
+                    return false;
+            }
+            else
+            {
+                timer.Reset();
+                return true;
+            }
+        }
+
+        /// <summary>
+        /// Stops the internal timer
+        /// </summary>
+        /// <returns></returns>
+        public bool Stop()
+        {
+            if (timer != null)
+            {
+                timer.Stop();
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public void SetCallbacks (Action StartMethod, Action StopMethod)
+        {
+            this.StartMethod = StartMethod;
+            this.StopMethod = StopMethod;
+        }
+
+        #endregion
+
+        #region private methods
+        void Init (BasicTriList panel, uint buttonOffset, string fileName)
         {
             this.panel = panel;
             this.buttonOffset = buttonOffset;
+            this.fileName = fileName;
 
             daysStart = new bool[LIMIT_DAYS];
             daysStop = new bool[LIMIT_DAYS];
 
+            this.StartMethod = null;
+            this.StopMethod = null;
+
             panel.SigChange += new SigEventHandler(panel_SigChange);
             panel.OnlineStatusChange += new OnlineStatusChangeEventHandler(panel_OnlineStatusChange);
+
+            // start timer
+            Start();
         }
+
 
         /// <summary>
         /// Outputs debugging information to the Console (if enabled)
@@ -121,6 +195,52 @@ namespace FM.Utilities
             UI.SetSerialJoin(panel, button, timeStop);
             Debug("Setting " + button + " to " + timeStop);
         }
+
+        /// <summary>
+        /// Checks current system time against stored values and executes callback methods if match found
+        /// </summary>
+        /// <param name="obj">Not used in this method</param>
+        void TimerCheck(object obj)
+        {
+            int dayCurr = (int)DateTime.Now.DayOfWeek;
+            int hourCurr = DateTime.Now.Hour;
+            int minuteCurr = DateTime.Now.Minute;
+            
+            // alter day to make monday first day of week
+            if (dayCurr == 0)
+                dayCurr = 6;
+            else
+                dayCurr--;
+
+            Debug("TimerCheck() running. Current day: " + dayCurr + " Current hour: " + hourCurr + ", current minute: " + minuteCurr);
+
+            // check for start
+            if (daysStart[dayCurr])
+            {
+                bool hourMatch = hourStart == hourCurr;
+                bool minuteMatch = minuteStart == minuteCurr;
+
+                if (hourMatch && minuteMatch)
+                {
+                    Debug("Start triggered");
+                    StartMethod();
+                }
+            }
+
+            // check for stop
+            if (daysStop[dayCurr])
+            {
+                bool hourMatch = hourStop == hourCurr;
+                bool minuteMatch = minuteStop == minuteCurr;
+
+                if (hourMatch && minuteMatch)
+                {
+                    Debug("Stop triggered");
+                    StopMethod();
+                }
+            }
+        }
+
 
         void panel_OnlineStatusChange(GenericBase currentDevice, OnlineOfflineEventArgs args)
         {
@@ -210,5 +330,7 @@ namespace FM.Utilities
                 PanelFeedback();                
             }            
         }
+
+        #endregion
     }
 }
