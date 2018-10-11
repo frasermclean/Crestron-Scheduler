@@ -11,6 +11,12 @@ using UI = AVPlus.Utils.UI.UserInterfaceHelper;
 
 namespace FM.Utilities
 {
+    struct SchedulerEvent
+    {
+        public bool[] days;
+        public uint hour, minute;
+    }
+
     public class Scheduler
     {
         #region constants
@@ -45,9 +51,13 @@ namespace FM.Utilities
         const uint TEXT_STOP = 2;
 
         // limits
+        const uint LIMIT_DAYS = 7;
         const uint LIMIT_HOUR_MAX = 23;
         const uint LIMIT_MINUTE_MAX = 59;
-        const uint LIMIT_DAYS = 7;
+        
+        // events
+        public const uint EVENT_START = 0;
+        public const uint EVENT_STOP = 1;
 
         // defaults
         const string DEFAULT_FILENAME = "schedule.txt";
@@ -62,11 +72,7 @@ namespace FM.Utilities
         uint buttonOffset;
 
         CTimer timer;
-
-        bool[] daysStart;
-        bool[] daysStop;
-        uint hourStart, hourStop;
-        uint minuteStart, minuteStop;
+        SchedulerEvent[] events = new SchedulerEvent[2];        
         string fileName;
 
         Action StartMethod, StopMethod;
@@ -138,11 +144,11 @@ namespace FM.Utilities
             this.buttonOffset = buttonOffset;
             this.fileName = fileName;
 
-            daysStart = new bool[LIMIT_DAYS];
-            daysStop = new bool[LIMIT_DAYS];
-
             this.StartMethod = null;
             this.StopMethod = null;
+
+            events[EVENT_START].days = new bool[LIMIT_DAYS];
+            events[EVENT_STOP].days = new bool[LIMIT_DAYS];
 
             panel.SigChange += new SigEventHandler(panel_SigChange);
             panel.OnlineStatusChange += new OnlineStatusChangeEventHandler(panel_OnlineStatusChange);
@@ -176,24 +182,22 @@ namespace FM.Utilities
             {
                 // start days
                 button = (uint)(BTN_START_MON + i + buttonOffset);
-                UI.SetDigitalJoin(panel, button, daysStart[i]);
+                UI.SetDigitalJoin(panel, button, events[EVENT_START].days[i]);
 
                 // stop days
                 button = (uint)(BTN_STOP_MON + i + buttonOffset);
-                UI.SetDigitalJoin(panel, button, daysStop[i]);
+                UI.SetDigitalJoin(panel, button, events[EVENT_STOP].days[i]);
             }
 
             // start time text
-            string timeStart = String.Format("{0}:{1:D2}", hourStart, minuteStart);
+            string timeStart = String.Format("{0}:{1:D2}", events[EVENT_START].hour, events[EVENT_START].minute);
             button = TEXT_START + buttonOffset;
             UI.SetSerialJoin(panel, button, timeStart);
-            Debug("Setting " + button + " to " + timeStart);
 
             // stop time text
-            string timeStop = String.Format("{0}:{1:D2}", hourStop, minuteStop);
+            string timeStop = String.Format("{0}:{1:D2}", events[EVENT_STOP].hour, events[EVENT_STOP].minute);
             button = TEXT_STOP + buttonOffset;
             UI.SetSerialJoin(panel, button, timeStop);
-            Debug("Setting " + button + " to " + timeStop);
         }
 
         /// <summary>
@@ -215,10 +219,10 @@ namespace FM.Utilities
             Debug("TimerCheck() running. Current day: " + dayCurr + " Current hour: " + hourCurr + ", current minute: " + minuteCurr);
 
             // check for start
-            if (daysStart[dayCurr])
+            if (events[EVENT_START].days[dayCurr])
             {
-                bool hourMatch = hourStart == hourCurr;
-                bool minuteMatch = minuteStart == minuteCurr;
+                bool hourMatch = events[EVENT_START].hour == hourCurr;
+                bool minuteMatch = events[EVENT_START].minute == minuteCurr;
 
                 if (hourMatch && minuteMatch)
                 {
@@ -228,10 +232,10 @@ namespace FM.Utilities
             }
 
             // check for stop
-            if (daysStop[dayCurr])
+            if (events[EVENT_STOP].days[dayCurr])
             {
-                bool hourMatch = hourStop == hourCurr;
-                bool minuteMatch = minuteStop == minuteCurr;
+                bool hourMatch = events[EVENT_STOP].hour == hourCurr;
+                bool minuteMatch = events[EVENT_STOP].minute == minuteCurr;
 
                 if (hourMatch && minuteMatch)
                 {
@@ -257,75 +261,82 @@ namespace FM.Utilities
 
                 Debug("Button " + button + " pressed.");
 
-                if (button >= BTN_START_MON && button <= BTN_START_SUN)
+                try
                 {
-                    uint index = button - BTN_START_MON;
-                    daysStart[index] = !daysStart[index];
+                    if (button >= BTN_START_MON && button <= BTN_START_SUN)
+                    {
+                        uint index = button - BTN_START_MON;
+                        events[EVENT_START].days[index] = !events[EVENT_START].days[index];
+                    }
+                    else if (button >= BTN_STOP_MON && button <= BTN_STOP_SUN)
+                    {
+                        uint index = button - BTN_STOP_MON;
+                        events[EVENT_STOP].days[index] = !events[EVENT_STOP].days[index];
+                    }
+                    else switch (button)
+                        {
+                            case BTN_START_HOUR_INC:
+                                {
+                                    events[EVENT_START].hour--;
+                                    if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
+                                        events[EVENT_START].hour = 0;
+                                    break;
+                                }
+                            case BTN_START_HOUR_DEC:
+                                {
+                                    events[EVENT_START].hour--;
+                                    if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
+                                        events[EVENT_START].hour = LIMIT_HOUR_MAX;
+                                    break;
+                                }
+                            case BTN_START_MINUTE_INC:
+                                {
+                                    events[EVENT_START].minute++;
+                                    if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
+                                        events[EVENT_START].minute = 0;
+                                    break;
+                                }
+                            case BTN_START_MINUTE_DEC:
+                                {
+                                    events[EVENT_START].minute--;
+                                    if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
+                                        events[EVENT_START].minute = LIMIT_MINUTE_MAX;
+                                    break;
+                                }
+                            case BTN_STOP_HOUR_INC:
+                                {
+                                    events[EVENT_STOP].hour++;
+                                    if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
+                                        events[EVENT_STOP].hour = 0;
+                                    break;
+                                }
+                            case BTN_STOP_HOUR_DEC:
+                                {
+                                    events[EVENT_STOP].hour--;
+                                    if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
+                                        events[EVENT_STOP].hour = LIMIT_HOUR_MAX;
+                                    break;
+                                }
+                            case BTN_STOP_MINUTE_INC:
+                                {
+                                    events[EVENT_STOP].minute++;
+                                    if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
+                                        events[EVENT_STOP].minute = 0;
+                                    break;
+                                }
+                            case BTN_STOP_MINUTE_DEC:
+                                {
+                                    events[EVENT_STOP].minute--;
+                                    if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
+                                        events[EVENT_STOP].minute = LIMIT_MINUTE_MAX;
+                                    break;
+                                }
+                        }
                 }
-                else if (button >= BTN_STOP_MON && button <= BTN_STOP_SUN)
+                catch (Exception e)
                 {
-                    uint index = button - BTN_STOP_MON;
-                    daysStop[index] = !daysStop[index];
+                    Debug("Exeception occureed: " + e.Message);
                 }
-                else switch (button)
-                {
-                    case BTN_START_HOUR_INC:
-                    {
-                        hourStart++;
-                        if (hourStart > LIMIT_HOUR_MAX)
-                            hourStart = 0;
-                        break;
-                    }
-                    case BTN_START_HOUR_DEC:
-                    {
-                        hourStart--;
-                        if (hourStart > LIMIT_HOUR_MAX)
-                            hourStart = LIMIT_HOUR_MAX;
-                        break;
-                    }
-                    case BTN_START_MINUTE_INC:
-                    {
-                        minuteStart++;
-                        if (minuteStart > LIMIT_MINUTE_MAX)
-                            minuteStart = 0;
-                        break;                        
-                    }
-                    case BTN_START_MINUTE_DEC:
-                    {
-                        minuteStart--;
-                        if (minuteStart > LIMIT_MINUTE_MAX)
-                            minuteStart = LIMIT_MINUTE_MAX;
-                        break;
-                    }
-                    case BTN_STOP_HOUR_INC:
-                    {
-                        hourStop++;
-                        if (hourStop > LIMIT_HOUR_MAX)
-                            hourStop = 0;
-                        break;
-                    }
-                    case BTN_STOP_HOUR_DEC:
-                    {
-                        hourStop--;
-                        if (hourStop > LIMIT_HOUR_MAX)
-                            hourStop = LIMIT_HOUR_MAX;
-                        break;
-                    }
-                    case BTN_STOP_MINUTE_INC:
-                    {
-                        minuteStop++;
-                        if (minuteStop > LIMIT_MINUTE_MAX)
-                            minuteStop = 0;
-                        break;
-                    }
-                    case BTN_STOP_MINUTE_DEC:
-                    {
-                        minuteStop--;
-                        if (minuteStop > LIMIT_MINUTE_MAX)
-                            minuteStop = LIMIT_MINUTE_MAX;
-                        break;
-                    }
-                }               
 
                 PanelFeedback();                
             }            
