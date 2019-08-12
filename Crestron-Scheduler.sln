@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scheduler", "Scheduler\Scheduler.csproj", "{3AEDB0E1-E4A0-478E-8740-7355809D4441}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestSystem", "TestSystem\TestSystem.csproj", "{FFEF1A88-7662-4B73-B9DA-686456C9B5D6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,6 +15,10 @@ Global
 		{3AEDB0E1-E4A0-478E-8740-7355809D4441}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3AEDB0E1-E4A0-478E-8740-7355809D4441}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3AEDB0E1-E4A0-478E-8740-7355809D4441}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FFEF1A88-7662-4B73-B9DA-686456C9B5D6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FFEF1A88-7662-4B73-B9DA-686456C9B5D6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FFEF1A88-7662-4B73-B9DA-686456C9B5D6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FFEF1A88-7662-4B73-B9DA-686456C9B5D6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
