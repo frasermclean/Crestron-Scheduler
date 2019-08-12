@@ -11,7 +11,7 @@ using Newtonsoft.Json;
 
 using UI = AVPlus.Utils.UI.UserInterfaceHelper;
 
-namespace FM.Utilities
+namespace FM.Scheduler
 {
     struct SchedulerEvent
     {
