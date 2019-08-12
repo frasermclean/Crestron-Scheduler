@@ -70,8 +70,7 @@ namespace FM.Scheduler
         const string DEFAULT_FILENAME = "scheduler.json";
         #endregion
 
-        #region class variables
-
+        #region Class variables
         // debugging
         public bool debug_enable { get; set; }
 
@@ -83,7 +82,11 @@ namespace FM.Scheduler
         string fileName;
 
         Action StartMethod, StopMethod;
+        #endregion
 
+        #region Properties
+        public bool TraceEnabled { get; set; }
+        public string TraceName { get; set; }
         #endregion
 
         #region public methods
@@ -154,13 +157,13 @@ namespace FM.Scheduler
 
                 events = JsonConvert.DeserializeObject<SchedulerEvent[]>(json);
 
-                Debug("Load() loaded data from file.");
+                Trace("Load() loaded data from file.");
 
                 return true;
             }
             catch (Exception e)
             {
-                Debug("Load() exception occurred: " + e.Message);
+                Trace("Load() exception occurred: " + e.Message);
                 return false;
             }
         }
@@ -179,13 +182,13 @@ namespace FM.Scheduler
                 stream.Write(json, Encoding.Default);
                 stream.Close();
 
-                Debug("Save() saved all data to file.");
+                Trace("Save() saved all data to file.");
 
                 return true;
             }
             catch (Exception e)
             {
-                Debug("Save() exception occurred: " + e.Message);
+                Trace("Save() exception occurred: " + e.Message);
                 return false;
             }
 
@@ -228,13 +231,10 @@ namespace FM.Scheduler
         /// Outputs debugging information to the Console (if enabled)
         /// </summary>
         /// <param name="message">Message to print to console.</param>
-        void Debug(string message)
+        void Trace(string message)
         {
-            if (debug_enable)
-            {
-                string debugMessage = message.Trim();
-                CrestronConsole.PrintLine("[Scheduler] " + debugMessage);
-            }
+            if (TraceEnabled)
+                CrestronConsole.PrintLine(String.Format("[{0}] {1}", TraceName, message.Trim()));
         }
 
         /// <summary>
@@ -282,7 +282,7 @@ namespace FM.Scheduler
             else
                 dayCurr--;
 
-            Debug("TimerCheck() running. Current day: " + dayCurr + " Current hour: " + hourCurr + ", current minute: " + minuteCurr);
+            Trace("TimerCheck() running. Current day: " + dayCurr + " Current hour: " + hourCurr + ", current minute: " + minuteCurr);
 
             // check for start
             if (events[EVENT_START].days[dayCurr])
@@ -292,7 +292,7 @@ namespace FM.Scheduler
 
                 if (hourMatch && minuteMatch)
                 {
-                    Debug("Start triggered");
+                    Trace("Start triggered");
                     StartMethod();
                 }
             }
@@ -305,7 +305,7 @@ namespace FM.Scheduler
 
                 if (hourMatch && minuteMatch)
                 {
-                    Debug("Stop triggered");
+                    Trace("Stop triggered");
                     StopMethod();
                 }
             }
