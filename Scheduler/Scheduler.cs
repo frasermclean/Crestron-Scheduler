@@ -144,7 +144,7 @@ namespace FM.Utilities
         {
             try
             {
-                string path = string.Format("NVRAM\\{0}", fileName);
+                string path = String.Format("USER\\{0}", fileName);
                 string json = File.ReadToEnd(path, Encoding.Default);
 
                 events = JsonConvert.DeserializeObject<SchedulerEvent[]>(json);
@@ -168,7 +168,7 @@ namespace FM.Utilities
             try
             {
                 string json = JsonConvert.SerializeObject(events);
-                string path = string.Format("NVRAM\\{0}", fileName);
+                string path = String.Format("USER\\{0}", fileName);
 
                 FileStream stream = File.Create(path);
                 stream.Write(json, Encoding.Default);
