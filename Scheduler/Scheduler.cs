@@ -19,39 +19,44 @@ namespace FM.Utilities
         public uint hour, minute;
     }
 
+    static class DigitalJoins
+    {
+        // auto start buttons
+        public const uint StartDayMonday = 1;
+        public const uint StartDayTuesday = 2;
+        public const uint StartDayWednesday = 3;
+        public const uint StartDayThursday = 4;
+        public const uint StartDayFriday = 5;
+        public const uint StartDaySaturday = 6;
+        public const uint StartDaySunday = 7;
+        public const uint StartHourIncrease = 8;
+        public const uint StartHourDecrease = 9;
+        public const uint StartMinuteIncrease = 10;
+        public const uint StartMinuteDecrease = 11;
+
+        // auto stop buttons
+        public const uint StopDayMonday = 12;
+        public const uint StopDayTuesday = 13;
+        public const uint StopDayWednesday = 14;
+        public const uint StopDayThursday = 15;
+        public const uint StopDayFriday = 16;
+        public const uint StopDaySaturday = 17;
+        public const uint StopDaySunday = 18;
+        public const uint StopHourIncrease = 19;
+        public const uint StopHourDecrease = 20;
+        public const uint StopMinuteIncrease = 21;
+        public const uint StopMinuteDecrease = 22;
+    }
+
+    static class SerialJoins
+    {
+        public const uint StartText = 1;
+        public const uint StopText = 1;
+    }
+
     public class Scheduler
     {
         #region constants
-        // auto start buttons
-        const uint BTN_START_MON = 1;
-        const uint BTN_START_TUE = 2;
-        const uint BTN_START_WED = 3;
-        const uint BTN_START_THU = 4;
-        const uint BTN_START_FRI = 5;
-        const uint BTN_START_SAT = 6;
-        const uint BTN_START_SUN = 7;
-        const uint BTN_START_HOUR_INC = 8;
-        const uint BTN_START_HOUR_DEC = 9;
-        const uint BTN_START_MINUTE_INC = 10;
-        const uint BTN_START_MINUTE_DEC = 11;
-
-        // auto stop buttons
-        const uint BTN_STOP_MON = 12;
-        const uint BTN_STOP_TUE = 13;
-        const uint BTN_STOP_WED = 14;
-        const uint BTN_STOP_THU = 15;
-        const uint BTN_STOP_FRI = 16;
-        const uint BTN_STOP_SAT = 17;
-        const uint BTN_STOP_SUN = 18;
-        const uint BTN_STOP_HOUR_INC = 19;
-        const uint BTN_STOP_HOUR_DEC = 20;
-        const uint BTN_STOP_MINUTE_INC = 21;
-        const uint BTN_STOP_MINUTE_DEC = 22;
-  
-        // text files
-        const uint TEXT_START = 1;
-        const uint TEXT_STOP = 2;
-
         // limits
         const uint LIMIT_DAYS = 7;
         const uint LIMIT_HOUR_MAX = 23;
@@ -242,22 +247,22 @@ namespace FM.Utilities
             for (int i = 0; i < LIMIT_DAYS; i++)
             {
                 // start days
-                button = (uint)(BTN_START_MON + i + buttonOffset);
+                button = (uint)(DigitalJoins.StartDayMonday + i + buttonOffset);
                 UI.SetDigitalJoin(panel, button, events[EVENT_START].days[i]);
 
                 // stop days
-                button = (uint)(BTN_STOP_MON + i + buttonOffset);
+                button = (uint)(DigitalJoins.StopDayMonday + i + buttonOffset);
                 UI.SetDigitalJoin(panel, button, events[EVENT_STOP].days[i]);
             }
 
             // start time text
             string timeStart = String.Format("{0}:{1:D2}", events[EVENT_START].hour, events[EVENT_START].minute);
-            button = TEXT_START + buttonOffset;
+            button = SerialJoins.StartText + buttonOffset;
             UI.SetSerialJoin(panel, button, timeStart);
 
             // stop time text
             string timeStop = String.Format("{0}:{1:D2}", events[EVENT_STOP].hour, events[EVENT_STOP].minute);
-            button = TEXT_STOP + buttonOffset;
+            button = SerialJoins.StopText + buttonOffset;
             UI.SetSerialJoin(panel, button, timeStop);
         }
 
@@ -320,68 +325,68 @@ namespace FM.Utilities
             {
                 uint button = args.Sig.Number - buttonOffset;
 
-                if (button >= BTN_START_MON && button <= BTN_START_SUN)
+                if (button >= DigitalJoins.StartDayMonday && button <= DigitalJoins.StartDaySunday)
                 {
-                    uint index = button - BTN_START_MON;
+                    uint index = button - DigitalJoins.StartDayMonday;
                     events[EVENT_START].days[index] = !events[EVENT_START].days[index];
                 }
-                else if (button >= BTN_STOP_MON && button <= BTN_STOP_SUN)
+                else if (button >= DigitalJoins.StopDayMonday && button <= DigitalJoins.StopDaySunday)
                 {
-                    uint index = button - BTN_STOP_MON;
+                    uint index = button - DigitalJoins.StopDayMonday;
                     events[EVENT_STOP].days[index] = !events[EVENT_STOP].days[index];
                 }
                 else switch (button)
                 {
-                    case BTN_START_HOUR_INC:
+                    case DigitalJoins.StartHourIncrease:
                     {
                         events[EVENT_START].hour++;
                         if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
                             events[EVENT_START].hour = 0;
                         break;
                     }
-                    case BTN_START_HOUR_DEC:
+                    case DigitalJoins.StartHourDecrease:
                     {
                         events[EVENT_START].hour--;
                         if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
                             events[EVENT_START].hour = LIMIT_HOUR_MAX;
                         break;
                     }
-                    case BTN_START_MINUTE_INC:
+                    case DigitalJoins.StartMinuteIncrease:
                     {
                         events[EVENT_START].minute++;
                         if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
                             events[EVENT_START].minute = 0;
                         break;
                     }
-                    case BTN_START_MINUTE_DEC:
+                    case DigitalJoins.StartMinuteDecrease:
                     {
                         events[EVENT_START].minute--;
                         if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
                             events[EVENT_START].minute = LIMIT_MINUTE_MAX;
                         break;
                     }
-                    case BTN_STOP_HOUR_INC:
+                    case DigitalJoins.StopHourIncrease:
                     {
                         events[EVENT_STOP].hour++;
                         if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
                             events[EVENT_STOP].hour = 0;
                         break;
                     }
-                    case BTN_STOP_HOUR_DEC:
+                    case DigitalJoins.StopHourDecrease:
                     {
                         events[EVENT_STOP].hour--;
                         if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
                             events[EVENT_STOP].hour = LIMIT_HOUR_MAX;
                         break;
                     }
-                    case BTN_STOP_MINUTE_INC:
+                    case DigitalJoins.StopMinuteIncrease:
                     {
                         events[EVENT_STOP].minute++;
                         if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
                             events[EVENT_STOP].minute = 0;
                         break;
                     }
-                    case BTN_STOP_MINUTE_DEC:
+                    case DigitalJoins.StopMinuteDecrease:
                     {
                         events[EVENT_STOP].minute--;
                         if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
