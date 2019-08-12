@@ -13,6 +13,8 @@ using UI = AVPlus.Utils.UI.UserInterfaceHelper;
 
 namespace FM.Scheduler
 {
+    public delegate void SchedulerDelegate(uint eventID);
+
     struct SchedulerEvent
     {
         public bool[] days;
@@ -80,13 +82,15 @@ namespace FM.Scheduler
         CTimer timer;
         SchedulerEvent[] events = new SchedulerEvent[2];        
         string fileName;
-
-        Action StartMethod, StopMethod;
         #endregion
 
         #region Properties
         public bool TraceEnabled { get; set; }
         public string TraceName { get; set; }
+        #endregion
+
+        #region Events
+        public event SchedulerDelegate EventCallback;
         #endregion
 
         #region public methods
@@ -137,12 +141,6 @@ namespace FM.Scheduler
             {
                 return false;
             }
-        }
-
-        public void SetCallbacks (Action StartMethod, Action StopMethod)
-        {
-            this.StartMethod = StartMethod;
-            this.StopMethod = StopMethod;
         }
 
         /// <summary>
@@ -209,9 +207,6 @@ namespace FM.Scheduler
             this.panel = panel;
             this.buttonOffset = buttonOffset;
             this.fileName = fileName;
-
-            this.StartMethod = null;
-            this.StopMethod = null;
 
             events[EVENT_START].days = new bool[LIMIT_DAYS];
             events[EVENT_STOP].days = new bool[LIMIT_DAYS];
@@ -292,8 +287,11 @@ namespace FM.Scheduler
 
                 if (hourMatch && minuteMatch)
                 {
-                    Trace("Start triggered");
-                    StartMethod();
+                    Trace("TimerCheck() Start triggered");
+                    if (EventCallback != null)
+                        EventCallback(EVENT_START);
+                    else
+                        Trace("TimerCheck() error, event callback method is null.");
                 }
             }
 
@@ -305,8 +303,11 @@ namespace FM.Scheduler
 
                 if (hourMatch && minuteMatch)
                 {
-                    Trace("Stop triggered");
-                    StopMethod();
+                    Trace("TimerCheck()Stop triggered");
+                    if (EventCallback != null)
+                        EventCallback(EVENT_STOP);
+                    else
+                        Trace("TimerCheck() error, event callback method is null.");
                 }
             }
         }
