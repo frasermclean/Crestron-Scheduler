@@ -3,9 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Crestron.SimplSharp;
+using Crestron.SimplSharp.CrestronIO;
 using Crestron.SimplSharpPro;
 using Crestron.SimplSharpPro.DeviceSupport;
 using Crestron.SimplSharpPro.UI;
+using Newtonsoft.Json;
 
 using UI = AVPlus.Utils.UI.UserInterfaceHelper;
 
@@ -60,7 +62,7 @@ namespace FM.Utilities
         public const uint EVENT_STOP = 1;
 
         // defaults
-        const string DEFAULT_FILENAME = "schedule.txt";
+        const string DEFAULT_FILENAME = "scheduler.json";
         #endregion
 
         #region class variables
@@ -99,7 +101,7 @@ namespace FM.Utilities
         {
             if (timer == null)
             {
-                timer = new CTimer(TimerCheck, null, 0, 5000);
+                timer = new CTimer(TimerCheck, null, 0, 60000);
                 if (timer != null)
                     return true;
                 else
@@ -135,11 +137,67 @@ namespace FM.Utilities
             this.StopMethod = StopMethod;
         }
 
+        /// <summary>
+        /// Loads event data from file.
+        /// </summary>
+        public bool Load()
+        {
+            try
+            {
+                string path = string.Format("NVRAM\\{0}", fileName);
+                string json = File.ReadToEnd(path, Encoding.Default);
+
+                events = JsonConvert.DeserializeObject<SchedulerEvent[]>(json);
+
+                Debug("Load() loaded data from file.");
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug("Load() exception occurred: " + e.Message);
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Saves current data to file.
+        /// </summary>
+        public bool Save()
+        {
+            try
+            {
+                string json = JsonConvert.SerializeObject(events);
+                string path = string.Format("NVRAM\\{0}", fileName);
+
+                FileStream stream = File.Create(path);
+                stream.Write(json, Encoding.Default);
+                stream.Close();
+
+                Debug("Save() saved all data to file.");
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug("Save() exception occurred: " + e.Message);
+                return false;
+            }
+
+        }
+
+        public void RefreshUI()
+        {
+            PanelFeedback();
+        }
+
         #endregion
 
         #region private methods
         void Init (BasicTriList panel, uint buttonOffset, string fileName)
         {
+            debug_enable = true;
+
             this.panel = panel;
             this.buttonOffset = buttonOffset;
             this.fileName = fileName;
@@ -152,6 +210,9 @@ namespace FM.Utilities
 
             panel.SigChange += new SigEventHandler(panel_SigChange);
             panel.OnlineStatusChange += new OnlineStatusChangeEventHandler(panel_OnlineStatusChange);
+
+            // load data
+            Load();
 
             // start timer
             Start();
@@ -259,86 +320,77 @@ namespace FM.Utilities
             {
                 uint button = args.Sig.Number - buttonOffset;
 
-                Debug("Button " + button + " pressed.");
-
-                try
+                if (button >= BTN_START_MON && button <= BTN_START_SUN)
                 {
-                    if (button >= BTN_START_MON && button <= BTN_START_SUN)
-                    {
-                        uint index = button - BTN_START_MON;
-                        events[EVENT_START].days[index] = !events[EVENT_START].days[index];
-                    }
-                    else if (button >= BTN_STOP_MON && button <= BTN_STOP_SUN)
-                    {
-                        uint index = button - BTN_STOP_MON;
-                        events[EVENT_STOP].days[index] = !events[EVENT_STOP].days[index];
-                    }
-                    else switch (button)
-                        {
-                            case BTN_START_HOUR_INC:
-                                {
-                                    events[EVENT_START].hour--;
-                                    if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
-                                        events[EVENT_START].hour = 0;
-                                    break;
-                                }
-                            case BTN_START_HOUR_DEC:
-                                {
-                                    events[EVENT_START].hour--;
-                                    if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
-                                        events[EVENT_START].hour = LIMIT_HOUR_MAX;
-                                    break;
-                                }
-                            case BTN_START_MINUTE_INC:
-                                {
-                                    events[EVENT_START].minute++;
-                                    if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
-                                        events[EVENT_START].minute = 0;
-                                    break;
-                                }
-                            case BTN_START_MINUTE_DEC:
-                                {
-                                    events[EVENT_START].minute--;
-                                    if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
-                                        events[EVENT_START].minute = LIMIT_MINUTE_MAX;
-                                    break;
-                                }
-                            case BTN_STOP_HOUR_INC:
-                                {
-                                    events[EVENT_STOP].hour++;
-                                    if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
-                                        events[EVENT_STOP].hour = 0;
-                                    break;
-                                }
-                            case BTN_STOP_HOUR_DEC:
-                                {
-                                    events[EVENT_STOP].hour--;
-                                    if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
-                                        events[EVENT_STOP].hour = LIMIT_HOUR_MAX;
-                                    break;
-                                }
-                            case BTN_STOP_MINUTE_INC:
-                                {
-                                    events[EVENT_STOP].minute++;
-                                    if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
-                                        events[EVENT_STOP].minute = 0;
-                                    break;
-                                }
-                            case BTN_STOP_MINUTE_DEC:
-                                {
-                                    events[EVENT_STOP].minute--;
-                                    if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
-                                        events[EVENT_STOP].minute = LIMIT_MINUTE_MAX;
-                                    break;
-                                }
-                        }
+                    uint index = button - BTN_START_MON;
+                    events[EVENT_START].days[index] = !events[EVENT_START].days[index];
                 }
-                catch (Exception e)
+                else if (button >= BTN_STOP_MON && button <= BTN_STOP_SUN)
                 {
-                    Debug("Exeception occureed: " + e.Message);
+                    uint index = button - BTN_STOP_MON;
+                    events[EVENT_STOP].days[index] = !events[EVENT_STOP].days[index];
+                }
+                else switch (button)
+                {
+                    case BTN_START_HOUR_INC:
+                    {
+                        events[EVENT_START].hour++;
+                        if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
+                            events[EVENT_START].hour = 0;
+                        break;
+                    }
+                    case BTN_START_HOUR_DEC:
+                    {
+                        events[EVENT_START].hour--;
+                        if (events[EVENT_START].hour > LIMIT_HOUR_MAX)
+                            events[EVENT_START].hour = LIMIT_HOUR_MAX;
+                        break;
+                    }
+                    case BTN_START_MINUTE_INC:
+                    {
+                        events[EVENT_START].minute++;
+                        if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
+                            events[EVENT_START].minute = 0;
+                        break;
+                    }
+                    case BTN_START_MINUTE_DEC:
+                    {
+                        events[EVENT_START].minute--;
+                        if (events[EVENT_START].minute > LIMIT_MINUTE_MAX)
+                            events[EVENT_START].minute = LIMIT_MINUTE_MAX;
+                        break;
+                    }
+                    case BTN_STOP_HOUR_INC:
+                    {
+                        events[EVENT_STOP].hour++;
+                        if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
+                            events[EVENT_STOP].hour = 0;
+                        break;
+                    }
+                    case BTN_STOP_HOUR_DEC:
+                    {
+                        events[EVENT_STOP].hour--;
+                        if (events[EVENT_STOP].hour > LIMIT_HOUR_MAX)
+                            events[EVENT_STOP].hour = LIMIT_HOUR_MAX;
+                        break;
+                    }
+                    case BTN_STOP_MINUTE_INC:
+                    {
+                        events[EVENT_STOP].minute++;
+                        if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
+                            events[EVENT_STOP].minute = 0;
+                        break;
+                    }
+                    case BTN_STOP_MINUTE_DEC:
+                    {
+                        events[EVENT_STOP].minute--;
+                        if (events[EVENT_STOP].minute > LIMIT_MINUTE_MAX)
+                            events[EVENT_STOP].minute = LIMIT_MINUTE_MAX;
+                        break;
+                    }
                 }
 
-                PanelFeedback();                
+                PanelFeedback();
             }            
         }
 
